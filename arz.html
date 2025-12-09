@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0a0f">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%233b82f6' width='100' height='100' rx='20'/><text x='50' y='65' text-anchor='middle' fill='white' font-size='40' font-weight='bold'>📈</text></svg>">
+    <title>StockApp - Mobile Dashboard</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* ==========================================
+           styles/global.css - Global Styles
+           ========================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'SF Pro Display', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        html, body, #root {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background: #0a0a0f;
+        }
+
+        /* Mobile App Container */
+        .app-container {
+            max-width: 430px;
+            margin: 0 auto;
+            height: 100%;
+            background: linear-gradient(180deg, #0f0f1a 0%, #0a0a0f 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Scrollable Content Area */
+        .screen-content {
+            height: calc(100% - 80px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 20px;
+        }
+
+        .screen-content::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Pull to Refresh Indicator */
+        .pull-indicator {
+            text-align: center;
+            padding: 15px;
+            color: #6b7280;
+            font-size: 12px;
+        }
+
+        /* Status Bar Simulation */
+        .status-bar {
+            height: 44px;
+            background: rgba(15, 15, 26, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-bar-time {
+            font-weight: 600;
+            font-size: 14px;
+            color: white;
+        }
+
+        .status-bar-icons {
+            display: flex;
+            gap: 6px;
+            font-size: 12px;
+            color: white;
+        }
+
+        /* Bottom Tab Navigation */
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: rgba(20, 20, 30, 0.98);
+            backdrop-filter: blur(20px);
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 16px;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+        }
+
+        .nav-item.active {
+            background: rgba(59, 130, 246, 0.15);
+        }
+
+        .nav-item i {
+            font-size: 20px;
+            color: #6b7280;
+            transition: color 0.2s ease;
+        }
+
+        .nav-item.active i {
+            color: #3b82f6;
+        }
+
+        .nav-item span {
+            font-size: 10px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .nav-item.active span {
+            color: #3b82f6;
+        }
+
+        /* Card Styles */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 16px;
+            margin: 12px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Animations */
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .animate-slide-up {
+            animation: slideUp 0.3s ease-out forwards;
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        /* Touch Feedback */
+        .touchable {
+            transition: transform 0.1s ease, opacity 0.1s ease;
+        }
+
+        .touchable:active {
+            transform: scale(0.98);
+            opacity: 0.8;
+        }
+
+        /* Safe Area */
+        @supports (padding-bottom: env(safe-area-inset-bottom)) {
+            .bottom-nav {
+                padding-bottom: env(safe-area-inset-bottom);
+                height: calc(80px + env(safe-area-inset-bottom));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useContext, createContext, useRef, useCallback, useMemo } = React;
+
+        // ==========================================
+        // src/services/api.js - API Service
+        // ==========================================
+        const API = {
+            // Sample stock data (simulating API response)
+            getStocks: () => {
+                return [
+                    { symbol: 'AAPL', name: 'Apple Inc.', price: 178.52, change: 2.34, changePercent: 1.33, marketCap: '2.81T', volume: '52.3M', high52: 199.62, low52: 124.17 },
+                    { symbol: 'GOOGL', name: 'Alphabet Inc.', price: 141.80, change: -1.25, changePercent: -0.87, marketCap: '1.78T', volume: '21.5M', high52: 153.78, low52: 83.34 },
+                    { symbol: 'MSFT', name: 'Microsoft', price: 378.91, change: 4.67, changePercent: 1.25, marketCap: '2.82T', volume: '18.9M', high52: 384.30, low52: 213.43 },
+                    { symbol: 'AMZN', name: 'Amazon', price: 178.25, change: 3.12, changePercent: 1.78, marketCap: '1.85T', volume: '41.2M', high52: 189.77, low52: 81.43 },
+                    { symbol: 'TSLA', name: 'Tesla Inc.', price: 248.50, change: -5.30, changePercent: -2.09, marketCap: '789.2B', volume: '98.7M', high52: 299.29, low52: 101.81 },
+                    { symbol: 'NVDA', name: 'NVIDIA', price: 875.35, change: 15.20, changePercent: 1.77, marketCap: '2.16T', volume: '45.8M', high52: 974.00, low52: 108.13 },
+                    { symbol: 'META', name: 'Meta', price: 505.75, change: 8.92, changePercent: 1.80, marketCap: '1.29T', volume: '15.6M', high52: 542.81, low52: 88.09 },
+                    { symbol: 'JPM', name: 'JPMorgan', price: 198.45, change: 1.23, changePercent: 0.62, marketCap: '571.2B', volume: '8.7M', high52: 205.88, low52: 123.11 },
+                ];
+            },
+
+            getHistoricalData: (symbol, days = 30) => {
+                const data = [];
+                let basePrice = API.getStocks().find(s => s.symbol === symbol)?.price || 150;
+                let price = basePrice * 0.9;
+                
+                for (let i = days; i >= 0; i--) {
+                    const date = new Date();
+                    date.setDate(date.getDate() - i);
+                    const change = (Math.random() - 0.48) * (basePrice * 0.02);
+                    price = Math.max(price + change, basePrice * 0.7);
+                    data.push({
+                        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                        price: parseFloat(price.toFixed(2))
+                    });
+                }
+                return data;
+            }
+        };
+
+        // ==========================================
+        // src/context/AppContext.js - App Context
+        // ==========================================
+        const AppContext = createContext();
+
+        const AppProvider = ({ children }) => {
+            const [stocks, setStocks] = useState(API.getStocks());
+            const [watchlist, setWatchlist] = useState(['AAPL', 'NVDA', 'TSLA']);
+            const [portfolio, setPortfolio] = useState([
+                { symbol: 'AAPL', shares: 50, avgCost: 165.00 },
+                { symbol: 'NVDA', shares: 20, avgCost: 450.00 },
+            ]);
+            const [currentScreen, setCurrentScreen] = useState('dashboard');
+            const [selectedStock, setSelectedStock] = useState(null);
+            const [isRefreshing, setIsRefreshing] = useState(false);
+            const [searchQuery, setSearchQuery] = useState('');
+
+            // Simulate real-time price updates (polling)
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    setStocks(prev => prev.map(stock => {
+                        const changeAmount = (Math.random() - 0.5) * 1.5;
+                        const newPrice = parseFloat((stock.price + changeAmount).toFixed(2));
+                        const newChange = parseFloat((stock.change + changeAmount * 0.2).toFixed(2));
+                        const newChangePercent = parseFloat(((newChange / newPrice) * 100).toFixed(2));
+                        return { ...stock, price: newPrice, change: newChange, changePercent: newChangePercent };
+                    }));
+                }, 5000);
+                return () => clearInterval(interval);
+            }, []);
+
+            const refreshData = async () => {
+                setIsRefreshing(true);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                setStocks(API.getStocks());
+                setIsRefreshing(false);
+            };
+
+            const toggleWatchlist = (symbol) => {
+                setWatchlist(prev => 
+                    prev.includes(symbol) 
+                        ? prev.filter(s => s !== symbol)
+                        : [...prev, symbol]
+                );
+            };
+
+            const portfolioValue = useMemo(() => {
+                return portfolio.reduce((sum, p) => {
+                    const stock = stocks.find(s => s.symbol === p.symbol);
+                    return sum + (stock ? stock.price * p.shares : 0);
+                }, 0);
+            }, [portfolio, stocks]);
+
+            const dailyGainLoss = useMemo(() => {
+                return portfolio.reduce((sum, p) => {
+                    const stock = stocks.find(s => s.symbol === p.symbol);
+                    return sum + (stock ? stock.change * p.shares : 0);
+                }, 0);
+            }, [portfolio, stocks]);
+
+            const value = {
+                stocks, watchlist, portfolio, currentScreen, selectedStock, isRefreshing, searchQuery,
+                setCurrentScreen, setSelectedStock, toggleWatchlist, refreshData, setSearchQuery,
+                portfolioValue, dailyGainLoss
+            };
+
+            return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+        };
+
+        // ==========================================
+        // src/components/StatusBar.jsx
+        // ==========================================
+        const StatusBar = () => {
+            const [time, setTime] = useState(new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }));
+
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    setTime(new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }));
+                }, 60000);
+                return () => clearInterval(interval);
+            }, []);
+
+            return (
+                <div className="status-bar">
+                    <span className="status-bar-time">{time}</span>
+                    <div className="status-bar-icons">
+                        <i className="fas fa-signal"></i>
+                        <i className="fas fa-wifi"></i>
+                        <i className="fas fa-battery-full"></i>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // src/components/Header.jsx
+        // ==========================================
+        const Header = ({ title, showBack, onBack, rightAction }) => {
+            return (
+                <div style={{
+                    padding: '16px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: 'transparent'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {showBack && (
+                            <button onClick={onBack} className="touchable" style={{
+                                background: 'rgba(255,255,255,0.1)',
+                                border: 'none',
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '10px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer'
+                            }}>
+                                <i className="fas fa-chevron-left" style={{ color: 'white', fontSize: '14px' }}></i>
+                            </button>
+                        )}
+                        <h1 style={{ color: 'white', fontSize: '24px', fontWeight: '700' }}>{title}</h1>
+                    </div>
+                    {rightAction}
+                </div>
+            );
+        };
+
+        // ==========================================
+        // src/components/SearchBar.jsx
+        // ==========================================
+        const SearchBar = () => {
+            const { searchQuery, setSearchQuery } = useContext(AppContext);
+
+            return (
+                <div style={{ padding: '0 16px', marginBottom: '12px' }}>
+                    <div style={{
+                        background: 'rgba(255,255,255,0.08)',
+                        borderRadius: '12px',
+                        padding: '12px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        border: '1px solid rgba(255,255,255,0.1)'
+                    }}>
+                        <i className="fas fa-search" style={{ color: '#6b7280', fontSize: '14px' }}></i>
+                        <input
+                            type="text"
+                            placeholder="Search stocks..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                outline: 'none',
+                                color: 'white',
+                                fontSize: '15px',
+                                width: '100%'
+                            }}
+                        />
+                        {searchQuery && (
+                            <button onClick={() => setSearchQuery('')} style={{
+                                background: 'rgba(255,255,255,0.2)',
+                                border: 'none',
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '10px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer'
+                            }}>
+                                <i className="fas fa-times" style={{ color: 'white', fontSize: '10px' }}></i>
+                            </button>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // src/components/SummaryCard.jsx
+        // ==========================================
+        const SummaryCard = ({ icon, title, value, change, color }) => {
+            const isPositive = change >= 0;
+
+            return (
+                <div style={{
+                    background: `linear-gradient(135deg, ${color}20 0%, ${color}05 100%)`,
+                    borderRadius: '16px',
+                    padding: '16px',
+                    flex: 1,
+                    minWidth: '140px',
+                    border: `1px solid ${color}30`
+                }}>
+                    <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '10px',
+                        background: `${color}30`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '12px'
+                    }}>
+                        <i className={`fas ${icon}`} style={{ color: color, fontSize: '14px' }}></i>
+                    </div>
+                    <p style={{ color: '#9ca3af', fontSize: '12px', marginBottom: '4px' }}>{title}</p>
+                    <p style={{ color: 'white', fontSize: '18px', fontWeight: '700' }}>{value}</p>
+                    {change !== undefined && (
+                        <p style={{ 
+                            color: isPositive ? '#22c55e' : '#ef4444', 
+                            fontSize: '12px', 
+                            marginTop: '4px',
+                            fontWeight: '500'
+                        }}>
+                            <i className={`fas fa-arrow-${isPositive ? 'up' : 'down'}`} style={{ marginRight: '4px' }}></i>
+                            {isPositive ? '+' : ''}{change.toFixed(2)}%
+                        </p>
+                    )}
+                </div>
+            );
+        };
+
+        // ==========================================
+        // src/components/StockListItem.jsx
+        // ==========================================
+        const StockListItem = ({ stock, index, onPress }) => {
+            const { watchlist, toggleWatchlist } = useContext(AppContext);
+            const isPositive = stock.change >= 0;
+            const isWatched = watchlist.includes(stock.symbol);
+
+            return (
+                <div 
+                    className="touchable animate-slide-up"
+                    onClick={() => onPress(stock)}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '14px 16px',
+                        background: 'rgba(255,255,255,0.03)',
+                        marginBottom: '8px',
+                        marginLeft: '16px',
+                        marginRight: '16px',
+                        borderRadius: '14px',
+                        cursor: 'pointer',
+                        animationDelay: `${index * 50}ms`,
+                        border: '1px solid rgba(255,255,255,0.06)'
+                    }}
+                >
+                    <div style={{
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '12px',
+                        background: isPositive ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: '12px'
+                    }}>
+                        <span style={{ 
+                            color: isPositive ? '#22c55e' : '#ef4444', 
+                            fontWeight: '700',
+                            fontSize: '16px'
+                        }}>
+                            {stock.symbol.charAt(0)}
+                        </span>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <p style={{ color: 'white', fontWeight: '600', fontSize: '15px' }}>{stock.symbol}</p>
+                        <p style={{ color: '#6b7280', fontSize: '12px', marginTop: '2px' }}>{stock.name}</p>
+                    </div>
+                    <div style={{ textAlign: 'right', marginRight: '12px' }}>
+                        <p style={{ color: 'white', fontWeight: '600', fontSize: '15px' }}>${stock.price.toFixed(2)}</p>
+                        <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'flex-end',
+                            marginTop: '2px'
+                        }}>
+                            <span style={{
+                                background: isPositive ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                color: isPositive ? '#22c55e' : '#ef4444',
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: '600'
+                            }}>
+                                {isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}%
+                            </span>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); toggleWatchlist(stock.symbol); }}
+                        className="touchable"
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            padding: '8px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <i className={`fa${isWatched ? 's' : 'r'} fa-star`} style={{ 
+                            color: isWatched ? '#fbbf24' : '#4b5563',
+                            fontSize: '16px'
+                        }}></i>
+                    </button>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // src/components/StockChart.jsx
+        // ==========================================
+        const StockChart = ({ symbol, period = '1m' }) => {
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+            const { stocks } = useContext(AppContext);
+
+            const periodDays = { '1w': 7, '1m': 30, '3m': 90, '6m': 180 };
+
+            useEffect(() => {
+                if (!chartRef.current) return;
+
+                const ctx = chartRef.current.getContext('2d');
+                const data = API.getHistoricalData(symbol, periodDays[period]);
+                const stock = stocks.find(s => s.symbol === symbol);
+                const isPositive = stock?.change >= 0;
+
+                if (chartInstance.current) {
+                    chartInstance.current.destroy();
+                }
+
+                const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+                gradient.addColorStop(0, isPositive ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)');
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+                chartInstance.current = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.map(d => d.date),
+                        datasets: [{
+                            label: symbol,
+                            data: data.map(d => d.price),
+                            borderColor: isPositive ? '#22c55e' : '#ef4444',
+                            backgroundColor: gradient,
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            pointHoverBackgroundColor: isPositive ? '#22c55e' : '#ef4444',
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { intersect: false, mode: 'index' },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(20, 20, 30, 0.95)',
+                                titleColor: '#fff',
+                                bodyColor: '#9ca3af',
+                                borderColor: 'rgba(255,255,255,0.1)',
+                                borderWidth: 1,
+                                padding: 10,
+                                displayColors: false,
+                                callbacks: {
+                                    label: (context) => `$${context.raw.toFixed(2)}`
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#4b5563', font: { size: 10 }, maxTicksLimit: 6 },
+                                border: { display: false }
+                            },
+                            y: {
+                                grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+                                ticks: { color: '#4b5563', font: { size: 10 }, callback: (v) => '$' + v },
+                                border: { display: false }
+                            }
+                        }
+                    }
+                });
+
+                return () => {
+                    if (chartInstance.current) chartInstance.current.destroy();
+                };
+            }, [symbol, period, stocks]);
+
+            return (
+                <div style={{ height: '200px', padding: '0 16px' }}>
+                    <canvas ref={chartRef}></canvas>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // src/components/BottomNav.jsx
+        // ==========================================
+        const BottomNav = () => {
+            const { currentScreen, setCurrentScreen, setSelectedStock } = useContext(AppContext);
+
+            const navItems = [
+                { id: 'dashboard', icon: 'fa-chart-line', label: 'Home' },
+                { id: 'watchlist', icon: 'fa-star', label: 'Watchlist' },
+                { id: 'portfolio', icon: 'fa-briefcase', label: 'Portfolio' },
+                { id: 'settings', icon: 'fa-cog', label: 'Settings' },
+            ];
+
+            return (
+                <div className="bottom-nav">
+                    {navItems.map(item => (
+                        <button 
+                            key={item.id}
+                            className={`nav-item ${currentScreen === item.id ? 'active' : ''}`}
+                            onClick={() => { setCurrentScreen(item.id); setSelectedStock(null); }}
+                        >
+                            <i className={`fas ${item.icon}`}></i>
+                            <span>{item.label}</span>
+                        </button>
+                    ))}
+                </div>
+            );
+        };
+
+        // ==========================================
+        // src/screens/DashboardScreen.jsx
+        // ==========================================
+        const DashboardScreen = () => {
+            const { stocks, portfolioValue, dailyGainLoss, isRefreshing, refreshData, searchQuery, setSelectedStock, setCurrentScreen } = useContext(AppContext);
+
+            const filteredStocks = useMemo(() => {
+                if (!searchQuery) return stocks;
+                return stocks.filter(s => 
+                    s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    s.name.toLowerCase().includes(searchQuery.toLowerCase())
+                );
+            }, [stocks, searchQuery]);
+
+            const handleStockPress = (stock) => {
+                setSelectedStock(stock);
+                setCurrentScreen('details');
+            };
+
+            return (
+                <div className="screen-content">
+                    <Header 
+                        title="Dashboard" 
+                        rightAction={
+                            <button 
+                                onClick={refreshData}
+                                className="touchable"
+                                style={{
+                                    background: 'rgba(59, 130, 246, 0.15)',
+                                    border: 'none',
+                                    width: '36px',
+                                    height: '36px',
+                                    borderRadius: '10px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <i className={`fas fa-sync-alt ${isRefreshing ? 'fa-spin' : ''}`} style={{ color: '#3b82f6', fontSize: '14px' }}></i>
+                            </button>
+                        }
+                    />
+
+                    {/* Summary Cards */}
+                    <div style={{ 
+                        display: 'flex', 
+                        gap: '12px', 
+                        padding: '0 16px',
+                        marginBottom: '16px',
+                        overflowX: 'auto'
+                    }}>
+                        <SummaryCard 
+                            icon="fa-wallet" 
+                            title="Portfolio Value" 
+                            value={`$${portfolioValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}
+                            change={(dailyGainLoss / portfolioValue) * 100}
+                            color="#3b82f6"
+                        />
+                        <SummaryCard 
+                            icon="fa-chart-line" 
+                            title="Today's Gain" 
+                            value={`${dailyGainLoss >= 0 ? '+' : ''}$${dailyGainLoss.toFixed(2)}`}
+                            change={(dailyGainLoss / portfolioValue) * 100}
+                            color={dailyGainLoss >= 0 ? "#22c55e" : "#ef4444"}
+                        />
+                    </div>
+
+                    {/* Search */}
+                    <SearchBar />
+
+                    {/* Section Title */}
+                    <div style={{ 
+                        padding: '16px 20px 8px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                    }}>
+                        <p style={{ color: 'white', fontWeight: '600', fontSize: '16px' }}>Market Overview</p>
+                        <p style={{ color: '#3b82f6', fontSize: '13px', fontWeight: '500' }}>{filteredStocks.length} stocks</p>
+                    </div>
+
+                    {/* Stock List */}
+                    {filteredStocks.map((stock, index) => (
+                        <StockListItem 
+                            key={stock.symbol} 
+                            stock={stock} 
+                            index={index}
+                            onPress={handleStockPress}
+                        />
+                    ))}
+
+                    {filteredStocks.length === 0 && (
+                        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                            <i className="fas fa-search" style={{ fontSize: '40px', color: '#374151', marginBottom: '16px' }}></i>
+                            <p style={{ color: '#6b7280' }}>No stocks found</p>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // ==========================================
+        // src/screens/StockDetailsScreen.jsx
+        // ==========================================
+        const StockDetailsScreen = () => {
+            const { selectedStock, stocks, setCurrentScreen, watchlist, toggleWatchlist } = useContext(AppContext);
+            const [period, setPeriod] = useState('1m');
+
+            const stock = stocks.find(s => s.symbol === selectedStock?.symbol) || selectedStock;
+
+            if (!stock) {
+                setCurrentScreen('dashboard');
+                return null;
+            }
+
+            const isPositive = stock.change >= 0;
+            const isWatched = watchlist.includes(stock.symbol);
+
+            const periods = ['1w', '1m', '3m', '6m'];
+
+            return (
+                <div className="screen-content">
+                    <Header 
+                        title={stock.symbol}
+                        showBack
+                        onBack={() => setCurrentScreen('dashboard')}
+                        rightAction={
+                            <button 
+                                onClick={() => toggleWatchlist(stock.symbol)}
+                                className="touchable"
+                                style={{
+                                    background: isWatched ? 'rgba(251, 191, 36, 0.15)' : 'rgba(255,255,255,0.1)',
+                                    border: 'none',
+                                    width: '36px',
+                                    height: '36px',
+                                    borderRadius: '10px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <i className={`fa${isWatched ? 's' : 'r'} fa-star`} style={{ color: isWatched ? '#fbbf24' : '#6b7280', fontSize: '14px' }}></i>
+                            </button>
+                        }
+                    />
+
+                    {/* Price Header */}
+                    <div style={{ padding: '0 20px 20px' }}>
+                        <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '4px' }}>{stock.name}</p>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+                            <span style={{ color: 'white', fontSize: '36px', fontWeight: '700' }}>${stock.price.toFixed(2)}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{
+                                    background: isPositive ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                    color: isPositive ? '#22c55e' : '#ef4444',
+                                    padding: '4px 10px',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: '600'
+                                }}>
+                                    <i className={`fas fa-arrow-${isPositive ? 'up' : 'down'}`} style={{ marginRight: '4px' }}></i>
+                                    {isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}%
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Period Tabs */}
+                    <div style={{ 
+                        display: 'flex', 
+                        gap: '8px', 
+                        padding: '0 16px',
+                        marginBottom: '16px'
+                    }}>
+                        {periods.map(p => (
+                            <button 
+                                key={p}
+                                onClick={() => setPeriod(p)}
+                                className="touchable"
+                                style={{
+                                    background: period === p ? '#3b82f6' : 'rgba(255,255,255,0.08)',
+                                    border: 'none',
+                                    padding: '8px 16px',
+                                    borderRadius: '8px',
+                                    color: period === p ? 'white' : '#9ca3af',
+                                    fontSize: '13px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    textTransform: 'uppercase'
+                                }}
+                            >
+                                {p}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Chart */}
+                    <StockChart symbol={stock.symbol} period={period} />
+
+                    {/* Key Metrics */}
+                    <div className="card" style={{ marginTop: '20px' }}>
+                        <h3 style={{ color: 'white', fontSize: '16px', fontWeight: '600', marginBottom: '16px' }}>Key Metrics</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                            {[
+                                { label: 'Market Cap', value: stock.marketCap },
+                                { label: 'Volume', value: stock.volume },
+                                { label: '52W High', value: `$${stock.high52}` },
+                                { label: '52W Low', value: `$${stock.low52}` },
+                                { label: 'Change', value: `${isPositive ? '+' : ''}$${stock.change.toFixed(2)}` },
+                                { label: 'Change %', value: `${isPositive ? '+' : ''}${stock.changePercent.toFixed(2)}%` },
+                            ].map((item, i) => (
+                                <div key={i} style={{ 
+                                    background: 'rgba(255,255,255,0.03)',
+                                    padding: '12px',
+                                    borderRadius: '10px'
+                                }}>
+                                    <p style={{ color: '#6b7280', fontSize: '12px', marginBottom: '4px' }}>{item.label}</p>
+                                    <p style={{ color: 'white', fontSize: '15px', fontWeight: '600' }}>{item.value}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div style={{ padding: '20px 16px', display: 'flex', gap: '12px' }}>
+                        <button className="touchable" style={{
+                            flex: 1,
+                            background: '#22c55e',
+                            border: 'none',
+                            padding: '16px',
+                            borderRadius: '12px',
+                            color: 'white',
+                            fontSize: '15px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                        }}>
+                            <i className="fas fa-plus" style={{ marginRight: '8px' }}></i>Buy
+                        </button>
+                        <button className="touchable" style={{
+                            flex: 1,
+                            background: '#ef4444',
+                            border: 'none',
+                            padding: '16px',
+                            borderRadius: '12px',
+                            color: 'white',
+                            fontSize: '15px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                        }}>
+                            <i className="fas fa-minus" style={{ marginRight: '8px' }}></i>Sell
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // src/screens/WatchlistScreen.jsx
+        // ==========================================
+        const WatchlistScreen = () => {
+            const { stocks, watchlist, setSelectedStock, setCurrentScreen } = useContext(AppContext);
+
+            const watchlistStocks = stocks.filter(s => watchlist.includes(s.symbol));
+
+            const handleStockPress = (stock) => {
+                setSelectedStock(stock);
+                setCurrentScreen('details');
+            };
+
+            return (
+                <div className="screen-content">
+                    <Header title="Watchlist" />
+
+                    {watchlistStocks.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                            <div style={{
+                                width: '80px',
+                                height: '80px',
+                                borderRadius: '20px',
+                                background: 'rgba(251, 191, 36, 0.1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '0 auto 20px'
+                            }}>
+                                <i className="far fa-star" style={{ fontSize: '32px', color: '#fbbf24' }}></i>
+                            </div>
+                            <p style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>No Watchlist Items</p>
+                            <p style={{ color: '#6b7280', fontSize: '14px' }}>Tap the star icon on any stock to add it here</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div style={{ padding: '8px 20px 12px' }}>
+                                <p style={{ color: '#6b7280', fontSize: '13px' }}>{watchlistStocks.length} stocks watched</p>
+                            </div>
+                            {watchlistStocks.map((stock, index) => (
+                                <StockListItem 
+                                    key={stock.symbol} 
+                                    stock={stock} 
+                                    index={index}
+                                    onPress={handleStockPress}
+                                />
+                            ))}
+                        </>
+                    )}
+                </div>
+            );
+        };
+
+        // ==========================================
+        // src/screens/PortfolioScreen.jsx
+        // ==========================================
+        const PortfolioScreen = () => {
+            const { portfolio, stocks, portfolioValue, dailyGainLoss, setSelectedStock, setCurrentScreen } = useContext(AppContext);
+
+            const portfolioData = useMemo(() => {
+                return portfolio.map(p => {
+                    const stock = stocks.find(s => s.symbol === p.symbol);
+                    const currentValue = stock ? stock.price * p.shares : 0;
+                    const costBasis = p.avgCost * p.shares;
+                    const gain = currentValue - costBasis;
+                    const gainPercent = (gain / costBasis) * 100;
+                    return { ...p, stock, currentValue, costBasis, gain, gainPercent };
+                });
+            }, [portfolio, stocks]);
+
+            const totalGain = portfolioData.reduce((sum, p) => sum + p.gain, 0);
+            const totalCost = portfolioData.reduce((sum, p) => sum + p.costBasis, 0);
+
+            return (
+                <div className="screen-content">
+                    <Header title="Portfolio" />
+
+                    {/* Portfolio Value Card */}
+                    <div className="card" style={{ 
+                        background: 'linear-gradient(135deg, #3b82f620 0%, #8b5cf620 100%)',
+                        border: '1px solid rgba(59, 130, 246, 0.3)'
+                    }}>
+                        <p style={{ color: '#9ca3af', fontSize: '13px', marginBottom: '4px' }}>Total Portfolio Value</p>
+                        <p style={{ color: 'white', fontSize: '32px', fontWeight: '700' }}>
+                            ${portfolioValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                        </p>
+                        <div style={{ display: 'flex', gap: '16px', marginTop: '12px' }}>
+                            <div>
+                                <p style={{ color: '#6b7280', fontSize: '11px' }}>Total Invested</p>
+                                <p style={{ color: 'white', fontSize: '14px', fontWeight: '600' }}>${totalCost.toFixed(2)}</p>
+                            </div>
+                            <div>
+                                <p style={{ color: '#6b7280', fontSize: '11px' }}>Total Gain/Loss</p>
+                                <p style={{ color: totalGain >= 0 ? '#22c55e' : '#ef4444', fontSize: '14px', fontWeight: '600' }}>
+                                    {totalGain >= 0 ? '+' : ''}${totalGain.toFixed(2)} ({((totalGain / totalCost) * 100).toFixed(2)}%)
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Holdings */}
+                    <div style={{ padding: '20px 20px 8px' }}>
+                        <p style={{ color: 'white', fontWeight: '600', fontSize: '16px' }}>Holdings</p>
+                    </div>
+
+                    {portfolioData.map((item, index) => (
+                        <div 
+                            key={item.symbol}
+                            className="touchable animate-slide-up"
+                            onClick={() => { setSelectedStock(item.stock); setCurrentScreen('details'); }}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '14px 16px',
+                                background: 'rgba(255,255,255,0.03)',
+                                marginBottom: '8px',
+                                marginLeft: '16px',
+                                marginRight: '16px',
+                                borderRadius: '14px',
+                                cursor: 'pointer',
+                                animationDelay: `${index * 50}ms`,
+                                border: '1px solid rgba(255,255,255,0.06)'
+                            }}
+                        >
+                            <div style={{
+                                width: '44px',
+                                height: '44px',
+                                borderRadius: '12px',
+                                background: item.gain >= 0 ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginRight: '12px'
+                            }}>
+                                <span style={{ 
+                                    color: item.gain >= 0 ? '#22c55e' : '#ef4444', 
+                                    fontWeight: '700',
+                                    fontSize: '16px'
+                                }}>
+                                    {item.symbol.charAt(0)}
+                                </span>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <p style={{ color: 'white', fontWeight: '600', fontSize: '15px' }}>{item.symbol}</p>
+                                <p style={{ color: '#6b7280', fontSize: '12px', marginTop: '2px' }}>{item.shares} shares @ ${item.avgCost.toFixed(2)}</p>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                                <p style={{ color: 'white', fontWeight: '600', fontSize: '15px' }}>${item.currentValue.toFixed(2)}</p>
+                                <p style={{ 
+                                    color: item.gain >= 0 ? '#22c55e' : '#ef4444', 
+                                    fontSize: '12px',
+                                    marginTop: '2px',
+                                    fontWeight: '500'
+                                }}>
+                                    {item.gain >= 0 ? '+' : ''}${item.gain.toFixed(2)} ({item.gainPercent.toFixed(1)}%)
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        // ==========================================
+        // src/screens/SettingsScreen.jsx
+        // ==========================================
+        const SettingsScreen = () => {
+            const [darkMode, setDarkMode] = useState(true);
+            const [notifications, setNotifications] = useState(true);
+
+            const settingsItems = [
+                { icon: 'fa-user', label: 'Account', subtitle: 'Personal information' },
+                { icon: 'fa-bell', label: 'Notifications', subtitle: 'Price alerts, news', toggle: true, value: notifications, onChange: setNotifications },
+                { icon: 'fa-moon', label: 'Dark Mode', subtitle: 'App appearance', toggle: true, value: darkMode, onChange: setDarkMode },
+                { icon: 'fa-shield-alt', label: 'Security', subtitle: 'Password, 2FA' },
+                { icon: 'fa-question-circle', label: 'Help & Support', subtitle: 'FAQ, contact us' },
+                { icon: 'fa-info-circle', label: 'About', subtitle: 'Version 1.0.0' },
+            ];
+
+            return (
+                <div className="screen-content">
+                    <Header title="Settings" />
+
+                    {/* Profile Card */}
+                    <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{
+                            width: '56px',
+                            height: '56px',
+                            borderRadius: '16px',
+                            background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <span style={{ color: 'white', fontSize: '24px', fontWeight: '700' }}>J</span>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <p style={{ color: 'white', fontSize: '17px', fontWeight: '600' }}>John Trader</p>
+                            <p style={{ color: '#6b7280', fontSize: '13px' }}>Premium Member</p>
+                        </div>
+                        <i className="fas fa-chevron-right" style={{ color: '#4b5563', fontSize: '14px' }}></i>
+                    </div>
+
+                    {/* Settings List */}
+                    <div style={{ padding: '20px 16px 8px' }}>
+                        <p style={{ color: '#6b7280', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>Preferences</p>
+                    </div>
+
+                    {settingsItems.map((item, index) => (
+                        <div 
+                            key={index}
+                            className="touchable"
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '14px 16px',
+                                background: 'rgba(255,255,255,0.03)',
+                                marginBottom: '1px',
+                                marginLeft: '16px',
+                                marginRight: '16px',
+                                borderRadius: index === 0 ? '14px 14px 0 0' : index === settingsItems.length - 1 ? '0 0 14px 14px' : '0',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <div style={{
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '10px',
+                                background: 'rgba(59, 130, 246, 0.15)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginRight: '14px'
+                            }}>
+                                <i className={`fas ${item.icon}`} style={{ color: '#3b82f6', fontSize: '14px' }}></i>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <p style={{ color: 'white', fontSize: '15px', fontWeight: '500' }}>{item.label}</p>
+                                <p style={{ color: '#6b7280', fontSize: '12px', marginTop: '2px' }}>{item.subtitle}</p>
+                            </div>
+                            {item.toggle ? (
+                                <div 
+                                    onClick={(e) => { e.stopPropagation(); item.onChange(!item.value); }}
+                                    style={{
+                                        width: '48px',
+                                        height: '28px',
+                                        borderRadius: '14px',
+                                        background: item.value ? '#3b82f6' : 'rgba(255,255,255,0.15)',
+                                        padding: '2px',
+                                        cursor: 'pointer',
+                                        transition: 'background 0.2s ease'
+                                    }}
+                                >
+                                    <div style={{
+                                        width: '24px',
+                                        height: '24px',
+                                        borderRadius: '12px',
+                                        background: 'white',
+                                        transform: item.value ? 'translateX(20px)' : 'translateX(0)',
+                                        transition: 'transform 0.2s ease'
+                                    }}></div>
+                                </div>
+                            ) : (
+                                <i className="fas fa-chevron-right" style={{ color: '#4b5563', fontSize: '12px' }}></i>
+                            )}
+                        </div>
+                    ))}
+
+                    {/* Logout Button */}
+                    <div style={{ padding: '24px 16px' }}>
+                        <button className="touchable" style={{
+                            width: '100%',
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            padding: '14px',
+                            borderRadius: '12px',
+                            color: '#ef4444',
+                            fontSize: '15px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px'
+                        }}>
+                            <i className="fas fa-sign-out-alt"></i>
+                            Sign Out
+                        </button>
+                    </div>
+
+                    {/* Version Info */}
+                    <p style={{ textAlign: 'center', color: '#4b5563', fontSize: '12px', padding: '16px' }}>
+                        StockApp v1.0.0 • Made with React Native
+                    </p>
+                </div>
+            );
+        };
+
+        // ==========================================
+        // src/App.jsx - Main App Component
+        // ==========================================
+        const App = () => {
+            const { currentScreen } = useContext(AppContext);
+
+            const renderScreen = () => {
+                switch (currentScreen) {
+                    case 'dashboard': return <DashboardScreen />;
+                    case 'details': return <StockDetailsScreen />;
+                    case 'watchlist': return <WatchlistScreen />;
+                    case 'portfolio': return <PortfolioScreen />;
+                    case 'settings': return <SettingsScreen />;
+                    default: return <DashboardScreen />;
+                }
+            };
+
+            return (
+                <div className="app-container">
+                    <StatusBar />
+                    {renderScreen()}
+                    {currentScreen !== 'details' && <BottomNav />}
+                </div>
+            );
+        };
+
+        // ==========================================
+        // src/index.js - Entry Point
+        // ==========================================
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(
+            <AppProvider>
+                <App />
+            </AppProvider>
+        );
+    </script>
+</body>
+</html>
